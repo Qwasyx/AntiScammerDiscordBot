@@ -67,11 +67,11 @@ async def update_harmful_tlds():
                             "Can't connect to {} anymore, error code {}".format(url, response.status))
                     else:
                         text = await response.text()
-                        new_harmful_phrases.update(text.splitlines())
+                        new_harmful_phrases.update(map(str.lower, text.splitlines()))
 
         harmful_tlds = new_harmful_tlds
         harmful_phrases = new_harmful_phrases
-        await asyncio.sleep(60 * 60 * 24)  # wait for 24 hours
+        await asyncio.sleep(60 * 60 * 2)  # wait for 2 hours
 
 
 def clean_new_members():
@@ -89,8 +89,9 @@ async def is_harmful_message(message):
             return True
 
     if len(urls) > 0:
+        lower_content = message.content.lower()
         for phrase in harmful_phrases:
-            if phrase in message.content:
+            if phrase in lower_content:
                 return True
     return False
 
