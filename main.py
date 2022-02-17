@@ -18,6 +18,7 @@ LOG_CHANNEL = int(os.getenv('LOG_CHANNEL'))
 
 intents = discord.Intents.default()
 intents.members = True
+intents.messages = True
 client = discord.Client(intents=intents)
 
 new_members = deque()
@@ -74,20 +75,20 @@ async def update_harmful_tlds():
         await asyncio.sleep(60 * 60 * 2)  # wait for 2 hours
 
 
-def clean_new_members():
-    now = datetime.now()
-    while len(new_members) > 0 and (now - new_members[0][1]).total_seconds() > 5 * 60:
-        new_members.popleft()
-
-
-async def is_harmful_message(message):
+def is_guaranteed_harmful_message(message):
     msg = message.content
     link_regex = re.compile(r"((https?):((//)|(\\\\))+[\w\d:#@%;$()~_?+-.0-=\\.&]*/)", re.MULTILINE | re.UNICODE)
     urls = link_regex.findall(msg)
     for url in urls:
         if url[0] in harmful_tlds or (url[0] + '/') in harmful_tlds:
             return True
+    return False
 
+
+def is_probably_harmful_message(message):
+    msg = message.content
+    link_regex = re.compile(r"((https?):((//)|(\\\\))+[\w\d:#@%;$()~_?+-.0-=\\.&]*/)", re.MULTILINE | re.UNICODE)
+    urls = link_regex.findall(msg)
     if len(urls) > 0:
         lower_content = message.content.lower()
         for phrase in harmful_phrases:
@@ -102,24 +103,13 @@ async def on_ready():
 
 
 @client.event
-async def on_member_join(member):
-    new_members.append((member.id, datetime.now()))
-
-
-@client.event
 async def on_message(message):
     if message.type != discord.MessageType.default:
         return
     if message.author == client.user.id:
         return
 
-    clean_new_members()
-    potential_member = discord.utils.find(lambda x: x[0] == message.author.id, new_members)
-
-    if potential_member is None:
-        return
-
-    if await is_harmful_message(message):
+    if is_guaranteed_harmful_message(message):
         log_channel = client.get_channel(LOG_CHANNEL)
         embed = discord.Embed(title="Banned scammer", color=discord.Color.red())
         embed.add_field(name="Message", value=message.clean_content)
@@ -127,8 +117,15 @@ async def on_message(message):
         embed.set_footer(text=str(message.author.id))
         await log_channel.send(embed=embed)
         await message.author.ban(delete_message_days=1, reason="Scammer (auto-detected by bot)")
+    elif is_probably_harmful_message(message):
+        log_channel = client.get_channel(LOG_CHANNEL)
+        embed = discord.Embed(title="Deleted possible scam message (consider banning them)", color=discord.Color.orange())
+        embed.add_field(name="Message", value=message.clean_content)
+        embed.set_author(name=message.author.name + '#' + message.author.discriminator, icon_url=message.author.avatar_url)
+        embed.set_footer(text=str(message.author.id))
+        await log_channel.send(embed=embed)
+        await message.delete()
 
-    new_members.remove(potential_member)
 
 if __name__ == '__main__':
     client.loop.create_task(update_harmful_tlds())
