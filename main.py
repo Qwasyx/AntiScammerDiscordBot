@@ -26,7 +26,7 @@ new_members = deque()
 harmful_tlds = set()
 harmful_phrases = set()
 
-json_scammer_lists = ["https://raw.githubusercontent.com/Discord-AntiScam/scam-links/main/urls.json"]
+json_scammer_lists = ["https://raw.githubusercontent.com/Discord-AntiScam/scam-links/main/list.json"]
 plain_scammer_lists = ["https://raw.githubusercontent.com/BuildBot42/discord-scam-links/main/list.txt",
                        "https://raw.githubusercontent.com/Qwasyx/DiscordScamDetectionList/main/known-scammer-domains.txt"]
 
