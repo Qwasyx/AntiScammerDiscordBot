@@ -19,6 +19,7 @@ LOG_CHANNEL = int(os.getenv('LOG_CHANNEL'))
 intents = discord.Intents.default()
 intents.members = True
 intents.messages = True
+intents.message_content = True
 client = discord.Client(intents=intents)
 
 new_members = deque()
