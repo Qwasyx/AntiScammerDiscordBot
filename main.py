@@ -128,7 +128,7 @@ async def on_message(message):
         embed.set_author(name=str(message.author), icon_url=message.author.display_avatar)
         embed.set_footer(text=str(message.author.id))
         await log_channel.send(embed=embed)
-        await message.author.timeout(until=timedelta(hours=24))
+        await message.author.timeout(timedelta(hours=24), reason="Scammer (auto-detected by bot)")
         await message.delete()
 
 
