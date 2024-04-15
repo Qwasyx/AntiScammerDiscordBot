@@ -3,7 +3,7 @@ import json
 import os
 import re
 from collections import deque
-from datetime import datetime
+from datetime import timedelta
 
 import aiohttp
 import asyncio
@@ -42,6 +42,7 @@ async def send_error(msg):
 async def update_harmful_tlds():
     global harmful_tlds, harmful_phrases
     while True:
+        print("Updating harmful tlds...")
         new_harmful_tlds = set()
         new_harmful_phrases = set()
         async with aiohttp.ClientSession() as session:
@@ -72,6 +73,7 @@ async def update_harmful_tlds():
 
         harmful_tlds = new_harmful_tlds
         harmful_phrases = new_harmful_phrases
+        print("Done updating harmful tlds...")
         await asyncio.sleep(60 * 60 * 2)  # wait for 2 hours
 
 
@@ -100,6 +102,7 @@ def is_probably_harmful_message(message):
 @client.event
 async def on_ready():
     print(f'{client.user.name} has connected to Discord!')
+    client.loop.create_task(update_harmful_tlds())
 
 
 @client.event
@@ -113,20 +116,20 @@ async def on_message(message):
         log_channel = client.get_channel(LOG_CHANNEL)
         embed = discord.Embed(title="Banned scammer", color=discord.Color.red())
         embed.add_field(name="Message", value=message.clean_content)
-        embed.set_author(name=message.author.name + '#' + message.author.discriminator, icon_url=message.author.avatar_url)
+        embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
         embed.set_footer(text=str(message.author.id))
         await log_channel.send(embed=embed)
         await message.author.ban(delete_message_days=1, reason="Scammer (auto-detected by bot)")
     elif is_probably_harmful_message(message):
         log_channel = client.get_channel(LOG_CHANNEL)
-        embed = discord.Embed(title="Deleted possible scam message (consider banning them)", color=discord.Color.orange())
+        embed = discord.Embed(title="Deleted possible scam message and added 1hr timeout (consider banning them)", color=discord.Color.orange())
         embed.add_field(name="Message", value=message.clean_content)
-        embed.set_author(name=message.author.name + '#' + message.author.discriminator, icon_url=message.author.avatar_url)
+        embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
         embed.set_footer(text=str(message.author.id))
         await log_channel.send(embed=embed)
+        await message.author.timeout(until=timedelta(hours=24))
         await message.delete()
 
 
 if __name__ == '__main__':
-    client.loop.create_task(update_harmful_tlds())
     client.run(TOKEN)
